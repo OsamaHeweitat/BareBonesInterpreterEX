@@ -1,0 +1,17 @@
+incr X;
+incr X;
+incr X;
+incr X;
+incr X;
+incr X;
+incr Y;
+incr Y;
+while X not 2 do;
+    decr X;
+    while X not 3 do;
+        decr X;
+    end;
+    while Y not 1 do;
+        decr Y;
+    end;
+end;

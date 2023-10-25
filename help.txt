@@ -1,0 +1,13 @@
+clear X;
+incr X;
+incr X;
+while X not 0 do;
+    clear Y;
+    incr Y;
+    incr Y;
+    incr Y;
+    while Y not 1 do;
+        decr Y;
+    end;
+    decr X;
+end;

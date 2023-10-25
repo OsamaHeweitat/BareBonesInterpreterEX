@@ -1,0 +1,2 @@
+javac BareBonesInterpreterEX.java
+java BareBonesInterpreterEX
