@@ -18,6 +18,7 @@ public class BareBonesInterpreterEX {
     private static Scanner inputScanner;
     private String[] commandKeyWords = {"clear", "incr", "decr", "while", "end"};
     private boolean skip;
+    private int globalWhileLoopCount = 0;
 
     public static void main(String[] args) {
         while(true){
@@ -101,7 +102,9 @@ public class BareBonesInterpreterEX {
                 break;
             case "while":
                 whileLoop(command, commands, variableTable, i);
-        }
+            case "end":
+                end(variable, variableTable);
+            }
         debugLog(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
     }
 
@@ -130,6 +133,7 @@ public class BareBonesInterpreterEX {
     }
 
     public void whileLoop(String command, String[] commands, String[][] variableTable, int index){
+        globalWhileLoopCount++;
         String variable = command.split(" ")[1];
         String value = getValue(variable, variableTable);
         int start = 0;
@@ -152,8 +156,17 @@ public class BareBonesInterpreterEX {
             }
         }
         while(!value.equals(command.split(" ")[3])){
+            whileSkips = 0;
             for(int i = start + 1; i < (end + 1); i++){
-                commandRunner(commands[i], commands, variableTable, i + 1, "while" + start);
+                if(commands[i].equals("end") && whileSkips > 0){
+                    whileSkips--;
+                }
+                if(whileSkips == 0){
+                    commandRunner(commands[i], commands, variableTable, i + 1, "while" + start);
+                }
+                if(commands[i].contains("while")){
+                    whileSkips++;
+                }
             }
             value = getValue(variable, variableTable);
         }
@@ -169,7 +182,10 @@ public class BareBonesInterpreterEX {
     }
 
     public void end(String variable, String[][] variableTable){
-        skip = false;
+        globalWhileLoopCount--;
+        if(globalWhileLoopCount == 0){
+            skip = false;
+        }
     }
 
     public String[][] variables(String[] commands){
