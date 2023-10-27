@@ -6,7 +6,7 @@ The main changes from the original are:
   * `add`
   * `sub`
   * `times`
-  * `div`
+  * `div` (results in a floored integer value.)
 * Added comments, they must start with "//" and end with ".".
 * Added if statements, the syntax is `if [var] is [value]" or "if [var] not [value]`, the end of the if block is signified with `end` (same as while loops.)
 * Allow while loops to have the syntax `while [var] is [value]`.
