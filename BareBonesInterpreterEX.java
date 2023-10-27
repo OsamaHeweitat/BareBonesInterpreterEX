@@ -18,9 +18,8 @@ public class BareBonesInterpreterEX {
     private boolean debugMode = false;
     private static Scanner fileScanner;
     private static Scanner inputScanner;
-    private String[] commandKeyWords = {"clear", "incr", "decr", "while", "end", "add", "sub", "times", "div"};
-    private boolean skip;
-    private int globalWhileLoopCount = 0;
+    private String[] commandKeyWords = {"clear", "incr", "decr", "while", "end", "add", "sub", "times", "div", "if"};
+    private int interpreterIndex = 0;
 
     public static void main(String[] args) {
         while(true){
@@ -81,9 +80,7 @@ public class BareBonesInterpreterEX {
             if(command.contains("//")){
                 debugLog("Comment found: " + command.substring(command.indexOf("//")));
                 String strippedCommand = command.substring(0, command.indexOf("//")).strip();
-                debugLog("Stripped command: " + strippedCommand);
                 String variable = command.substring(command.strip().indexOf(".") + 1).strip();
-                debugLog("Variable: " + variable);
                 commands.set(i, strippedCommand);
                 if(variable.length() > 0){
                     commands.add(i + 1, variable);
@@ -97,10 +94,10 @@ public class BareBonesInterpreterEX {
 
     public String[][] interpret(String[] commands){
         String[][] variableTable = variables(commands);
-        for(int i = 0; i < commands.length; i++){
+        for(interpreterIndex = 0; interpreterIndex < commands.length; interpreterIndex++){
             for(String keyWord : commandKeyWords){
-                if(commands[i].contains(keyWord) && !skip){
-                    commandRunner(commands[i], commands, variableTable, i + 1, "main");
+                if(commands[interpreterIndex].contains(keyWord)){
+                    commandRunner(commands[interpreterIndex], commands, variableTable, interpreterIndex + 1, "main");
                 }
             }
         }
@@ -154,17 +151,15 @@ public class BareBonesInterpreterEX {
     }
 
     public void whileCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
-        globalWhileLoopCount++;
         String value = getValue(variable, variableTable);
         int start = 0;
         int end = 0;
-        skip = true;
         int whileSkips = 0;
         System.out.println("***"+index);
         for(int i = index - 1; i < commands.length; i++){
             if(commands[i].equals(command)){
                 start = i;
-            }else if(commands[i].contains("while")){
+            }else if(commands[i].contains("while") || commands[i].contains("if")){
                 whileSkips++;
             }
             if(commands[i].equals("end") && whileSkips > 0){
@@ -175,20 +170,92 @@ public class BareBonesInterpreterEX {
                 break;
             }
         }
-        while(!value.equals(command.split(" ")[3])){
+
+        String desiredValue = command.split(" ")[3];
+        boolean not;
+        if(command.split(" ")[2].equals("not")){
+            not = true;
+        }else if(command.split(" ")[2].equals("is")){
+            not = false;
+        }else{
+            throw new IllegalArgumentException("Invalid while statement");
+        }
+        if(!(not && !value.equals(desiredValue) || (!not && value.equals(desiredValue)))){
+            for(int i = start + 1; i < (end + 1); i++){
+                if(commands[i].equals("end")){
+                    commandRunner(commands[i], commands, variableTable, i + 1, "if (from line " + (start + 1) + ")");
+                }
+            }
+        }
+        while((not && !value.equals(desiredValue) || (!not && value.equals(desiredValue)))){
             whileSkips = 0;
             for(int i = start + 1; i < (end + 1); i++){
                 if(commands[i].equals("end") && whileSkips > 0){
                     whileSkips--;
                 }
                 if(whileSkips == 0){
-                    commandRunner(commands[i], commands, variableTable, i + 1, "while" + start);
+                    commandRunner(commands[i], commands, variableTable, i + 1, "while (from line " + (start + 1) + ")");
                 }
-                if(commands[i].contains("while")){
+                if(commands[i].contains("while") || commands[i].contains("if")){
                     whileSkips++;
                 }
             }
             value = getValue(variable, variableTable);
+        }
+    }
+
+    public void ifCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
+        String value = getValue(variable, variableTable);
+        int start = 0;
+        int end = 0;
+        int whileSkips = 0;
+        for(int i = index - 1; i < commands.length; i++){
+            if(commands[i].equals(command)){
+                start = i;
+            }else if(commands[i].contains("while") || commands[i].contains("if")){
+                whileSkips++;
+            }
+            if(commands[i].equals("end") && whileSkips > 0){
+                whileSkips--;
+            }else if(commands[i].equals("end") && whileSkips == 0){
+                end = i;
+                System.out.println("start: " + (start + 1) + " end: " + (end + 1));
+                break;
+            }
+        }
+
+        String desiredValue = command.split(" ")[3];
+        boolean not;
+        if(command.split(" ")[2].equals("not")){
+            not = true;
+        }else if(command.split(" ")[2].equals("is")){
+            not = false;
+        }else{
+            throw new IllegalArgumentException("Invalid if statement");
+        }
+        if((not && !value.equals(desiredValue) || (!not && value.equals(desiredValue)))){
+            whileSkips = 0;
+            for(int i = start + 1; i < (end + 1); i++){
+                if(commands[i].equals("end") && whileSkips > 0){
+                    whileSkips--;
+                }
+                if(commands[i].equals("end")){
+                    commandRunner(commands[i], commands, variableTable, i + 1, "if (from line " + (start + 1) + ")");
+                }
+                if(whileSkips == 0){
+                    commandRunner(commands[i], commands, variableTable, i + 1, "if (from line " + (start + 1) + ")");
+                }
+                if(commands[i].contains("while") || commands[i].contains("if")){
+                    whileSkips++;
+                }
+            }
+            value = getValue(variable, variableTable);
+        }else{
+            for(int i = start + 1; i < (end + 1); i++){
+                if(commands[i].equals("end")){
+                    commandRunner(commands[i], commands, variableTable, i + 1, "if (from line " + (start + 1) + ")");
+                }
+            }
         }
     }
 
@@ -202,9 +269,10 @@ public class BareBonesInterpreterEX {
     }
 
     public void endCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
-        globalWhileLoopCount--;
-        if(globalWhileLoopCount == 0){
-            skip = false;
+        if((index) == commands.length){
+            interpreterIndex = index - 1;
+        }else{
+            interpreterIndex = index - 1;
         }
     }
 
@@ -212,10 +280,12 @@ public class BareBonesInterpreterEX {
         int value1 = -1;
         int value2 = -1;
         for(int i = 0; i < variableTable[0].length; i++){
-            if(variableTable[0][i].equals(command.split(" ")[2]))
+            if(variableTable[0][i].equals(command.split(" ")[2])){
                 value1 = Integer.parseInt(variableTable[1][i]);
-            if(variableTable[0][i].equals(command.split(" ")[3]))
+            }
+            if(variableTable[0][i].equals(command.split(" ")[3])){
                 value2 = Integer.parseInt(variableTable[1][i]);
+            }
         }
         if(value1 == -1){
             value1 = Integer.parseInt(command.split(" ")[2]);
@@ -234,10 +304,12 @@ public class BareBonesInterpreterEX {
         int value1 = -1;
         int value2 = -1;
         for(int i = 0; i < variableTable[0].length; i++){
-            if(variableTable[0][i].equals(command.split(" ")[2]))
+            if(variableTable[0][i].equals(command.split(" ")[2])){
                 value1 = Integer.parseInt(variableTable[1][i]);
-            if(variableTable[0][i].equals(command.split(" ")[3]))
+            }
+            if(variableTable[0][i].equals(command.split(" ")[3])){
                 value2 = Integer.parseInt(variableTable[1][i]);
+            }
         }
         if(value1 == -1){
             value1 = Integer.parseInt(command.split(" ")[2]);
@@ -256,10 +328,12 @@ public class BareBonesInterpreterEX {
         int value1 = -1;
         int value2 = -1;
         for(int i = 0; i < variableTable[0].length; i++){
-            if(variableTable[0][i].equals(command.split(" ")[2]))
+            if(variableTable[0][i].equals(command.split(" ")[2])){
                 value1 = Integer.parseInt(variableTable[1][i]);
-            if(variableTable[0][i].equals(command.split(" ")[3]))
+            }
+            if(variableTable[0][i].equals(command.split(" ")[3])){
                 value2 = Integer.parseInt(variableTable[1][i]);
+            }
         }
         if(value1 == -1){
             value1 = Integer.parseInt(command.split(" ")[2]);
@@ -278,10 +352,12 @@ public class BareBonesInterpreterEX {
         int value1 = -1;
         int value2 = -1;
         for(int i = 0; i < variableTable[0].length; i++){
-            if(variableTable[0][i].equals(command.split(" ")[2]))
+            if(variableTable[0][i].equals(command.split(" ")[2])){
                 value1 = Integer.parseInt(variableTable[1][i]);
-            if(variableTable[0][i].equals(command.split(" ")[3]))
+            }
+            if(variableTable[0][i].equals(command.split(" ")[3])){
                 value2 = Integer.parseInt(variableTable[1][i]);
+            }
         }
         if(value1 == -1){
             value1 = Integer.parseInt(command.split(" ")[2]);
@@ -324,4 +400,3 @@ public class BareBonesInterpreterEX {
         }
     }
 }
-

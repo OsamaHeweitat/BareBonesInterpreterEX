@@ -1,0 +1,15 @@
+incr X;
+incr X;
+incr X;
+if X is 3;
+incr Y;
+incr Y;
+end;
+if X not 4;
+incr Z;
+incr Z;
+end;
+if X is 10;
+incr W;
+incr W;
+end;
