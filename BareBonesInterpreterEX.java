@@ -108,7 +108,7 @@ public class BareBonesInterpreterEX {
         String[] commandWords = command.split(" ");
         String commandKeyWord = commandWords[0];
         String variable = null;
-        System.out.println(i + " " + command + " (" + callingFunction + ")");
+        debugLog(i + " " + command + " (" + callingFunction + ")");
         if(commandWords.length >= 2){
             variable = commandWords[1];
         }
@@ -118,12 +118,13 @@ public class BareBonesInterpreterEX {
             commandMethod.invoke(this, variable, variableTable, command, commands, i);
         } catch (NoSuchMethodException e) {
             System.out.println("Command not recognized: " + commandKeyWord);
+            System.exit(0);
         } catch (IllegalAccessException e) {
             e.printStackTrace();
         } catch (InvocationTargetException e) {
             e.getCause().printStackTrace();
         }
-        debugLog(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
+        debugLog(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]) + "\n");
     }
 
     public void clearCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
@@ -155,7 +156,6 @@ public class BareBonesInterpreterEX {
         int start = 0;
         int end = 0;
         int whileSkips = 0;
-        System.out.println("***"+index);
         for(int i = index - 1; i < commands.length; i++){
             if(commands[i].equals(command)){
                 start = i;
@@ -166,7 +166,7 @@ public class BareBonesInterpreterEX {
                 whileSkips--;
             }else if(commands[i].equals("end") && whileSkips == 0){
                 end = i;
-                System.out.println("start: " + (start + 1) + " end: " + (end + 1));
+                debugLog("start: " + (start + 1) + " end: " + (end + 1) + "\n");
                 break;
             }
         }
@@ -219,7 +219,7 @@ public class BareBonesInterpreterEX {
                 whileSkips--;
             }else if(commands[i].equals("end") && whileSkips == 0){
                 end = i;
-                System.out.println("start: " + (start + 1) + " end: " + (end + 1));
+                debugLog("start: " + (start + 1) + " end: " + (end + 1) + "\n");
                 break;
             }
         }
