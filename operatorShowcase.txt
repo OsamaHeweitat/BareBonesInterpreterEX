@@ -1,0 +1,11 @@
+incr X;
+incr X;
+incr X;
+incr X;
+incr X;
+incr Y;
+incr Y;
+add addition X Y;
+sub subtraction X Y;
+times multiplication X Y;
+div division X Y;

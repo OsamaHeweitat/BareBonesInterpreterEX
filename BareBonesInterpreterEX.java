@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
+import java.lang.reflect.Method;
+import java.lang.reflect.InvocationTargetException;
 
 /* Watch our for
  * Debug Mode
@@ -16,7 +18,7 @@ public class BareBonesInterpreterEX {
     private boolean debugMode = false;
     private static Scanner fileScanner;
     private static Scanner inputScanner;
-    private String[] commandKeyWords = {"clear", "incr", "decr", "while", "end"};
+    private String[] commandKeyWords = {"clear", "incr", "decr", "while", "end", "add", "sub", "times", "div"};
     private boolean skip;
     private int globalWhileLoopCount = 0;
 
@@ -34,11 +36,13 @@ public class BareBonesInterpreterEX {
 
     public void run(){
         inputScanner = new Scanner(System.in);
-        System.out.print("Enter the file name (include extension): ");
+        System.out.print("Enter the file name (excluding extension): ");
         String fileName = inputScanner.nextLine();
-        File file = new File(fileName);
 
         try {
+            File file = new File(fileName + ".txt");
+            if(!file.exists())
+                file = new File(fileName + ".bb");
             fileScanner = new Scanner(file);
         } catch (FileNotFoundException e) {
             System.out.println("File not found");
@@ -64,10 +68,31 @@ public class BareBonesInterpreterEX {
         while(fileScanner.hasNext()){
             lines.add(fileScanner.next().strip());
         }
+        getRidOfComments(lines);
         String[] commands = lines.toArray(new String[0]);
         debugLog(Arrays.toString(commands));
         String[][] variableTable = interpret(commands);
         System.out.println(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
+    }
+
+    public void getRidOfComments(List<String> commands){
+        for(int i = 0; i < commands.size(); i++){
+            String command = commands.get(i);
+            if(command.contains("//")){
+                debugLog("Comment found: " + command.substring(command.indexOf("//")));
+                String strippedCommand = command.substring(0, command.indexOf("//")).strip();
+                debugLog("Stripped command: " + strippedCommand);
+                String variable = command.substring(command.strip().indexOf(".") + 1).strip();
+                debugLog("Variable: " + variable);
+                commands.set(i, strippedCommand);
+                if(variable.length() > 0){
+                    commands.add(i + 1, variable);
+                }
+                if(strippedCommand.equals("")){
+                    commands.remove(i);
+                }
+            }
+        }
     }
 
     public String[][] interpret(String[] commands){
@@ -90,25 +115,21 @@ public class BareBonesInterpreterEX {
         if(commandWords.length >= 2){
             variable = commandWords[1];
         }
-        switch(commandKeyWord){
-            case "clear":
-                clear(variable, variableTable);
-                break;
-            case "incr":
-                incr(variable, variableTable);
-                break;
-            case "decr":
-                decr(variable, variableTable);
-                break;
-            case "while":
-                whileLoop(command, commands, variableTable, i);
-            case "end":
-                end(variable, variableTable);
-            }
+
+        try {
+            Method commandMethod = this.getClass().getDeclaredMethod(commandKeyWord + "Cmd", String.class, String[][].class, String.class, String[].class, int.class);
+            commandMethod.invoke(this, variable, variableTable, command, commands, i);
+        } catch (NoSuchMethodException e) {
+            System.out.println("Command not recognized: " + commandKeyWord);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (InvocationTargetException e) {
+            e.getCause().printStackTrace();
+        }
         debugLog(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
     }
 
-    public void clear(String variable, String[][] variableTable){
+    public void clearCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
         for(int i = 0; i < variableTable[0].length; i++){
             if(variableTable[0][i].equals(variable)){
                 variableTable[1][i] = "0";
@@ -116,7 +137,7 @@ public class BareBonesInterpreterEX {
         }
     }
 
-    public void incr(String variable, String[][] variableTable){
+    public void incrCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
         for(int i = 0; i < variableTable[0].length; i++){
             if(variableTable[0][i].equals(variable)){
                 variableTable[1][i] = Integer.toString(Integer.parseInt(variableTable[1][i]) + 1);
@@ -124,7 +145,7 @@ public class BareBonesInterpreterEX {
         }
     }
 
-    public void decr(String variable, String[][] variableTable){
+    public void decrCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
         for(int i = 0; i < variableTable[0].length; i++){
             if(variableTable[0][i].equals(variable)){
                 variableTable[1][i] = Integer.toString(Integer.parseInt(variableTable[1][i]) - 1);
@@ -132,9 +153,8 @@ public class BareBonesInterpreterEX {
         }
     }
 
-    public void whileLoop(String command, String[] commands, String[][] variableTable, int index){
+    public void whileCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
         globalWhileLoopCount++;
-        String variable = command.split(" ")[1];
         String value = getValue(variable, variableTable);
         int start = 0;
         int end = 0;
@@ -181,10 +201,98 @@ public class BareBonesInterpreterEX {
         return null;
     }
 
-    public void end(String variable, String[][] variableTable){
+    public void endCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
         globalWhileLoopCount--;
         if(globalWhileLoopCount == 0){
             skip = false;
+        }
+    }
+
+    public void addCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
+        int value1 = -1;
+        int value2 = -1;
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(command.split(" ")[2]))
+                value1 = Integer.parseInt(variableTable[1][i]);
+            if(variableTable[0][i].equals(command.split(" ")[3]))
+                value2 = Integer.parseInt(variableTable[1][i]);
+        }
+        if(value1 == -1){
+            value1 = Integer.parseInt(command.split(" ")[2]);
+        }
+        if(value2 == -1){
+            value2 = Integer.parseInt(command.split(" ")[3]);
+        }
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(variable)){
+                variableTable[1][i] = Integer.toString(value1 + value2);
+            }
+        }
+    }
+
+    public void subCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
+        int value1 = -1;
+        int value2 = -1;
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(command.split(" ")[2]))
+                value1 = Integer.parseInt(variableTable[1][i]);
+            if(variableTable[0][i].equals(command.split(" ")[3]))
+                value2 = Integer.parseInt(variableTable[1][i]);
+        }
+        if(value1 == -1){
+            value1 = Integer.parseInt(command.split(" ")[2]);
+        }
+        if(value2 == -1){
+            value2 = Integer.parseInt(command.split(" ")[3]);
+        }
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(variable)){
+                variableTable[1][i] = Integer.toString(value1 - value2);
+            }
+        }
+    }
+
+    public void timesCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
+        int value1 = -1;
+        int value2 = -1;
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(command.split(" ")[2]))
+                value1 = Integer.parseInt(variableTable[1][i]);
+            if(variableTable[0][i].equals(command.split(" ")[3]))
+                value2 = Integer.parseInt(variableTable[1][i]);
+        }
+        if(value1 == -1){
+            value1 = Integer.parseInt(command.split(" ")[2]);
+        }
+        if(value2 == -1){
+            value2 = Integer.parseInt(command.split(" ")[3]);
+        }
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(variable)){
+                variableTable[1][i] = Integer.toString(value1 * value2);
+            }
+        }
+    }
+
+    public void divCmd(String variable, String[][] variableTable, String command, String[] commands, int index){
+        int value1 = -1;
+        int value2 = -1;
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(command.split(" ")[2]))
+                value1 = Integer.parseInt(variableTable[1][i]);
+            if(variableTable[0][i].equals(command.split(" ")[3]))
+                value2 = Integer.parseInt(variableTable[1][i]);
+        }
+        if(value1 == -1){
+            value1 = Integer.parseInt(command.split(" ")[2]);
+        }
+        if(value2 == -1){
+            value2 = Integer.parseInt(command.split(" ")[3]);
+        }
+        for(int i = 0; i < variableTable[0].length; i++){
+            if(variableTable[0][i].equals(variable)){
+                variableTable[1][i] = Integer.toString((int) value1/value2);
+            }
         }
     }
 
