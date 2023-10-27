@@ -71,7 +71,7 @@ public class BareBonesInterpreterEX {
         String[] commands = lines.toArray(new String[0]);
         debugLog(Arrays.toString(commands));
         String[][] variableTable = interpret(commands);
-        System.out.println(Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
+        System.out.println("\n" + Arrays.toString(variableTable[0]) + Arrays.toString(variableTable[1]));
     }
 
     public void getRidOfComments(List<String> commands){
